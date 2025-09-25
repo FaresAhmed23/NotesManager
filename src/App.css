@@ -936,3 +936,203 @@ select:focus-visible {
     border: 1px solid #ddd;
   }
 }
+
+@media (max-width: 640px) {
+  /* Smaller padding on mobile */
+  .p-4 {
+    padding: 1rem;
+  }
+  
+  .p-6 {
+    padding: 1.5rem;
+  }
+  
+  .p-8 {
+    padding: 2rem;
+  }
+  
+  /* Adjust font sizes */
+  .text-4xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  /* Full width buttons on mobile */
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+  
+  /* Stack navigation items vertically on mobile */
+  .navigation-bar .nav-items {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  /* Modal adjustments */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+  
+  /* Note grid single column on mobile */
+  .notes-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Sidebar full width on mobile */
+  .sidebar {
+    width: 80%;
+    max-width: 320px;
+  }
+}
+
+/* Improved touch targets for mobile */
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Better modal scrolling on mobile */
+.modal-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Fix for iOS Safari modal scrolling */
+@supports (-webkit-touch-callout: none) {
+  .modal-content {
+    position: relative;
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* Responsive spacing utilities */
+.gap-responsive {
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .gap-responsive {
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gap-responsive {
+    gap: 2rem;
+  }
+}
+
+/* Improve mobile performance */
+@media (max-width: 768px) {
+  /* Disable hover effects on mobile */
+  .hover\:scale-105:hover {
+    transform: none;
+  }
+  
+  .hover\:shadow-lg:hover {
+    box-shadow: var(--shadow-md);
+  }
+  
+  /* Simpler animations on mobile */
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+  }
+  
+  .animate-scale-in-smooth {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Safe area insets for modern phones */
+.app-container {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Fix modal positioning on mobile */
+.fixed {
+  position: fixed;
+}
+
+@supports (position: fixed) {
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+}
+
+/* Improve form inputs on mobile */
+input,
+textarea,
+select {
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    width: 100%;
+  }
+}
+
+/* Better touch scrolling */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Responsive text utilities */
+.text-responsive {
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .text-responsive {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive {
+    font-size: 1.125rem;
+  }
+}
+

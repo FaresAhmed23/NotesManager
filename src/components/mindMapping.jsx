@@ -11,7 +11,9 @@ import {
   ZoomIn, 
   ZoomOut, 
   RotateCcw,
-  Palette
+  Palette,
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 
 const MindMap = ({ onClose, onSave, initialData = null }) => {
@@ -22,19 +24,38 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const canvasRef = useRef(null);
-    const [editingNode, setEditingNode] = useState(null);
+  const [editingNode, setEditingNode] = useState(null);
   const [editText, setEditText] = useState('');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [touchStartPos, setTouchStartPos] = useState(null);
 
   const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize with a central node if empty
   useEffect(() => {
     if (nodes.length === 0) {
+      const canvas = canvasRef.current;
+      const centerX = canvas ? canvas.width / 2 : 400;
+      const centerY = canvas ? canvas.height / 2 : 300;
+      
       const centerNode = {
         id: '1',
         text: 'Central Idea',
-        x: 400,
-        y: 300,
+        x: centerX,
+        y: centerY,
         color: '#3b82f6'
       };
       setNodes([centerNode]);
@@ -105,7 +126,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     // Draw nodes
     nodes.forEach(node => {
       const isSelected = selectedNode === node.id;
-      const radius = 40;
+      const radius = isMobile ? 30 : 40;
       
       // Node shadow
       if (!isSelected) {
@@ -133,7 +154,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
       
       // Node text
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px system-ui';
+      ctx.font = `bold ${isMobile ? '12px' : '14px'} system-ui`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
@@ -142,6 +163,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
       const words = node.text.split(' ');
       let line = '';
       let y = node.y;
+      const lineHeight = isMobile ? 14 : 16;
       
       for (let i = 0; i < words.length; i++) {
         const testLine = line + words[i] + ' ';
@@ -150,7 +172,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
         if (metrics.width > maxWidth && i > 0) {
           ctx.fillText(line, node.x, y);
           line = words[i] + ' ';
-          y += 16;
+          y += lineHeight;
         } else {
           line = testLine;
         }
@@ -159,7 +181,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     });
     
     ctx.restore();
-  }, [nodes, connections, selectedNode, zoom]);
+  }, [nodes, connections, selectedNode, zoom, isMobile]);
 
   const addNode = () => {
     if (!selectedNode) {
@@ -171,8 +193,8 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     if (!parentNode) return;
     
     const newId = Date.now().toString();
-    const angle = (nodes.length - 1) * (Math.PI / 4); // Spread nodes evenly
-    const distance = 150;
+    const angle = (nodes.length - 1) * (Math.PI / 4);
+    const distance = isMobile ? 100 : 150;
     
     const newNode = {
       id: newId,
@@ -184,7 +206,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     
     setNodes(prevNodes => [...prevNodes, newNode]);
     setConnections(prevConnections => [...prevConnections, { from: selectedNode, to: newId }]);
-    setSelectedNode(newId); // Auto-select the new node
+    setSelectedNode(newId);
   };
 
   const handleCanvasClick = (e) => {
@@ -194,10 +216,9 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
     
-    // Find clicked node
     const clickedNode = nodes.find(node => {
       const distance = Math.sqrt(Math.pow(x - node.x, 2) + Math.pow(y - node.y, 2));
-      return distance < 40; // 40 is the node radius
+      return distance < (isMobile ? 30 : 40);
     });
     
     if (clickedNode) {
@@ -214,13 +235,78 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     
     const clickedNode = nodes.find(node => {
       const distance = Math.sqrt(Math.pow(x - node.x, 2) + Math.pow(y - node.y, 2));
-      return distance < 40;
+      return distance < (isMobile ? 30 : 40);
     });
     
     if (clickedNode) {
       setEditingNode(clickedNode.id);
       setEditText(clickedNode.text);
     }
+  };
+
+  // Touch handlers for mobile
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (touch.clientX - rect.left) / zoom;
+      const y = (touch.clientY - rect.top) / zoom;
+      
+      setTouchStartPos({ x: touch.clientX, y: touch.clientY, time: Date.now() });
+      
+      const clickedNode = nodes.find(node => {
+        const distance = Math.sqrt(Math.pow(x - node.x, 2) + Math.pow(y - node.y, 2));
+        return distance < (isMobile ? 30 : 40);
+      });
+      
+      if (clickedNode) {
+        setSelectedNode(clickedNode.id);
+        setIsDragging(true);
+        setDragOffset({
+          x: x - clickedNode.x,
+          y: y - clickedNode.y
+        });
+      }
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (isDragging && selectedNode && e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (touch.clientX - rect.left) / zoom;
+      const y = (touch.clientY - rect.top) / zoom;
+      
+      setNodes(nodes.map(node => 
+        node.id === selectedNode 
+          ? { ...node, x: x - dragOffset.x, y: y - dragOffset.y }
+          : node
+      ));
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartPos && e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const timeDiff = Date.now() - touchStartPos.time;
+      const distance = Math.sqrt(
+        Math.pow(touch.clientX - touchStartPos.x, 2) + 
+        Math.pow(touch.clientY - touchStartPos.y, 2)
+      );
+      
+      // Double tap detection
+      if (timeDiff < 300 && distance < 10 && selectedNode) {
+        const node = nodes.find(n => n.id === selectedNode);
+        if (node) {
+          setEditingNode(selectedNode);
+          setEditText(node.text);
+        }
+      }
+    }
+    
+    setIsDragging(false);
+    setTouchStartPos(null);
   };
 
   const handleMouseDown = (e) => {
@@ -230,7 +316,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
     
     const clickedNode = nodes.find(node => {
       const distance = Math.sqrt(Math.pow(x - node.x, 2) + Math.pow(y - node.y, 2));
-      return distance < 40;
+      return distance < (isMobile ? 30 : 40);
     });
     
     if (clickedNode) {
@@ -291,18 +377,28 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
         ? { ...node, color }
         : node
     ));
+    setShowColorPicker(false);
   };
 
   const resetView = () => {
     setZoom(1);
     const canvas = canvasRef.current;
     if (canvas && nodes.length > 0) {
-      const firstNode = nodes[0];
-      setNodes(nodes.map((node, index) => ({
-        ...node,
-        x: index === 0 ? canvas.width / 2 / zoom : node.x,
-        y: index === 0 ? canvas.height / 2 / zoom : node.y
-      })));
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      
+      // Center the first node
+      if (nodes.length > 0) {
+        const firstNode = nodes[0];
+        const offsetX = centerX - firstNode.x * zoom;
+        const offsetY = centerY - firstNode.y * zoom;
+        
+        setNodes(nodes.map(node => ({
+          ...node,
+          x: node.x + offsetX / zoom,
+          y: node.y + offsetY / zoom
+        })));
+      }
     }
   };
 
@@ -317,126 +413,232 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl w-full max-w-6xl h-[85vh] flex flex-col shadow-xl border border-border">
-        {/* Simplified Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between bg-card">
-          <h2 className="text-lg font-semibold text-foreground">Mind Map</h2>
-          
-          <div className="flex items-center gap-2">
-            {/* Main Actions */}
-            <button
-              onClick={addNode}
-              disabled={!selectedNode}
-              className={`px-3 py-1.5 text-sm flex items-center gap-1 rounded-lg transition-colors ${
-                selectedNode 
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              Add Node
-            </button>
-            
-            <button
-              onClick={deleteNode}
-              disabled={!selectedNode || nodes.length === 1}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                selectedNode && nodes.length > 1
-                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              }`}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            
-            <div className="w-px h-6 bg-border" />
-            
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-card rounded-xl w-full max-w-6xl h-[90vh] sm:h-[85vh] flex flex-col shadow-xl border border-border">
+        {/* Header */}
+        <div className="p-3 sm:p-4 border-b border-border bg-card">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between md:hidden">
+            <h2 className="text-lg font-semibold text-foreground">Mind Map</h2>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                className="p-1.5 hover:bg-muted rounded transition-colors"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span className="text-sm w-12 text-center">{Math.round(zoom * 100)}%</span>
-              <button
-                onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                className="p-1.5 hover:bg-muted rounded transition-colors"
-              >
-                <ZoomIn className="w-4 h-4" />
+                <Menu className="w-5 h-5" />
               </button>
               <button
-                onClick={resetView}
-                className="p-1.5 hover:bg-muted rounded transition-colors"
-                title="Reset view"
+                onClick={onClose}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <RotateCcw className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-            
-            <div className="w-px h-6 bg-border" />
-            
-            {/* Color Picker */}
-            {selectedNode && (
-              <div className="flex gap-1">
-                {colors.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => changeNodeColor(color)}
-                    className="w-6 h-6 rounded hover:scale-110 transition-transform"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            )}
-            
-            <div className="w-px h-6 bg-border" />
-            
-            {/* Save/Export */}
-            <button
-              onClick={exportMindMap}
-              className="px-3 py-1.5 text-sm hover:bg-muted rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-            
-            <button
-              onClick={() => onSave({ nodes, connections })}
-              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors flex items-center gap-1"
-            >
-              <Save className="w-4 h-4" />
-              Save
-            </button>
-            
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
+
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Mind Map</h2>
+            
+            <div className="flex items-center gap-2">
+              {/* Main Actions */}
+              <button
+                onClick={addNode}
+                disabled={!selectedNode}
+                className={`px-3 py-1.5 text-sm flex items-center gap-1 rounded-lg transition-colors ${
+                  selectedNode 
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                Add Node
+              </button>
+              
+              <button
+                onClick={deleteNode}
+                disabled={!selectedNode || nodes.length === 1}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  selectedNode && nodes.length > 1
+                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              
+              <div className="w-px h-6 bg-border" />
+              
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                  className="p-1.5 hover:bg-muted rounded transition-colors"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-sm w-12 text-center">{Math.round(zoom * 100)}%</span>
+                <button
+                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                  className="p-1.5 hover:bg-muted rounded transition-colors"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={resetView}
+                  className="p-1.5 hover:bg-muted rounded transition-colors"
+                  title="Reset view"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div className="w-px h-6 bg-border" />
+              
+              {/* Color Picker */}
+              {selectedNode && (
+                <div className="flex gap-1">
+                  {colors.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => changeNodeColor(color)}
+                      className="w-6 h-6 rounded hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              <div className="w-px h-6 bg-border" />
+              
+              {/* Save/Export */}
+              <button
+                onClick={exportMindMap}
+                className="px-3 py-1.5 text-sm hover:bg-muted rounded-lg transition-colors"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+              
+              <button
+                onClick={() => onSave({ nodes, connections })}
+                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Action Menu */}
+          {showMobileMenu && (
+            <div className="mt-3 p-3 bg-muted/30 rounded-lg md:hidden space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={addNode}
+                  disabled={!selectedNode}
+                  className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                    selectedNode 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+                
+                <button
+                  onClick={deleteNode}
+                  disabled={!selectedNode || nodes.length === 1}
+                  className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                    selectedNode && nodes.length > 1
+                      ? 'bg-destructive text-destructive-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+                
+                <button
+                  onClick={() => onSave({ nodes, connections })}
+                  className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg transition-colors flex items-center justify-center gap-1"
+                >
+                  <Save className="w-4 h-4" />
+                  Save
+                </button>
+              </div>
+              
+              {/* Mobile Zoom Controls */}
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                  className="p-2 bg-muted rounded-lg"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-sm w-16 text-center">{Math.round(zoom * 100)}%</span>
+                <button
+                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                  className="p-2 bg-muted rounded-lg"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={resetView}
+                  className="p-2 bg-muted rounded-lg"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {/* Mobile Color Picker */}
+              {selectedNode && (
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm text-muted-foreground">Color:</span>
+                  <div className="flex gap-1">
+                    {colors.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => changeNodeColor(color)}
+                        className="w-8 h-8 rounded hover:scale-110 transition-transform"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Canvas */}
         <div className="flex-1 relative overflow-hidden bg-background">
           <canvas
             ref={canvasRef}
-            className="w-full h-full cursor-move"
+            className="w-full h-full cursor-move touch-none"
             onClick={handleCanvasClick}
             onDoubleClick={handleCanvasDoubleClick}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
           />
           
           {/* Edit Dialog */}
           {editingNode && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <div className="bg-card p-4 rounded-lg shadow-lg border border-border">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 p-4">
+              <div className="bg-card p-4 rounded-lg shadow-lg border border-border w-full max-w-sm">
                 <h3 className="text-sm font-semibold mb-3">Edit Node</h3>
                 <input
                   type="text"
@@ -444,16 +646,19 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
                   onChange={(e) => setEditText(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') saveEdit();
-                    if (e.key === 'Escape') setEditingNode(null);
+                    if (e.key === 'Escape') {
+                      setEditingNode(null);
+                      setEditText('');
+                    }
                   }}
-                  className="w-64 px-3 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Node text"
                   autoFocus
                 />
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={saveEdit}
-                    className="flex-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+                    className="flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
                   >
                     Save
                   </button>
@@ -462,7 +667,7 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
                       setEditingNode(null);
                       setEditText('');
                     }}
-                    className="flex-1 px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm transition-colors"
                   >
                     Cancel
                   </button>
@@ -471,16 +676,21 @@ const MindMap = ({ onClose, onSave, initialData = null }) => {
             </div>
           )}
           
-          {/* Help Text */}
-          <div className="absolute bg-slate-900 text-b text-white bottom-4 left-4 bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border text-xs text-muted-foreground">
+          {/* Help Text - Desktop Only */}
+          <div className="hidden sm:block absolute bottom-4 left-4 bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border text-xs text-muted-foreground">
             Click to select • Double-click to edit • Drag to move
+          </div>
+          
+          {/* Mobile Help Text */}
+          <div className="sm:hidden bg-slate-950 text-slate-500 absolute bottom-4 left-4 right-4 bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border text-xs text-muted-foreground text-center">
+            Tap to select • Double-tap to edit • Drag to move
           </div>
           
           {/* Selected Node Indicator */}
           {selectedNode && (
-            <div className="absolute top-4 left-4 bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border text-sm">
+            <div className="absolute bg-slate-950 text-slate-500 top-4 left-4 right-4 sm:right-auto bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border text-sm">
               <span className="text-muted-foreground">Selected: </span>
-              <span className="font-medium text-foreground">
+              <span className="font-medium text-white line-clamp-1">
                 {nodes.find(n => n.id === selectedNode)?.text}
               </span>
             </div>

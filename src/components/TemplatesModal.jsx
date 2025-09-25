@@ -48,11 +48,11 @@ const TemplatesModal = ({ onClose, onSelectTemplate }) => {
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in-up"
         onClick={onClose}
       />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden animate-scale-in-smooth">
-          <div className="p-6 border-b border-border">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] sm:max-h-[80vh] flex flex-col animate-scale-in-smooth pointer-events-auto">
+          <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-foreground">Note Templates</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Note Templates</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -62,29 +62,29 @@ const TemplatesModal = ({ onClose, onSelectTemplate }) => {
             </div>
           </div>
           
-          <div className="p-6 overflow-y-auto">
-            <p className="text-muted-foreground mb-8">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-contain">
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
               Start with a template to quickly create structured notes for different purposes.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {templates.map((template, index) => (
                 <button
-    key={index}
-    className="p-6 bg-muted/30 rounded-xl hover:bg-muted/50 hover:border-primary border-2 border-transparent transition-all text-left group animate-fade-in-up"
-    style={{ animationDelay: `${index * 100}ms` }}
-    onClick={() => {
-      if (onSelectTemplate) {
-        onSelectTemplate(template);
-      }
-      onClose();
-    }}
-  >
+                  key={index}
+                  className="p-4 sm:p-6 bg-muted/30 rounded-xl hover:bg-muted/50 hover:border-primary border-2 border-transparent transition-all text-left group animate-fade-in-up"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                  onClick={() => {
+                    if (onSelectTemplate) {
+                      onSelectTemplate(template);
+                    }
+                    onClose();
+                  }}
+                >
                   <div className="text-primary mb-3 group-hover:scale-110 transition-transform">
                     {template.icon}
                   </div>
-                  <h3 className="text-base font-semibold text-foreground mb-2">{template.title}</h3>
-                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                  <h3 className="text-sm sm:text-base font-semibold text-foreground mb-2">{template.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{template.description}</p>
                 </button>
               ))}
             </div>
